@@ -1,30 +1,28 @@
 function! HQ#Main() abort
-    let total_cnt = len(g:hq_commands)
-
-    " 新規バッファ開く
-    sil! exe 'keepa' ( 'to' ) total_cnt . 'new HQ'
-
+    " 新規バッファをフローティングウィンドウで開く
+    call HqFloatingWindow()
+    " バッファの設定
     setlocal buftype=nofile
-    setlocal noswapfile          "スワップファイルを作成しない
-    setlocal bufhidden=wipe      "バッファがウィンドウ内から表示されなくなったら削除
-    setlocal nonumber            "行番号を表示しない
-    setlocal nowrap              "ラップしない
-    setlocal nocursorline        "カーソル行をハイライトしない
-    setlocal nocursorcolumn      "カーソル列をハイライトしない
-
+    setlocal noswapfile     " スワップファイルを作成しない
+    setlocal bufhidden=wipe " バッファがウィンドウ内から表示されなくなったら削除
+    setlocal nonumber       " 行番号を表示しない
+    setlocal nowrap         " 改行しない
+    setlocal nocursorline   " カーソル行をハイライトしない
+    setlocal nocursorcolumn " カーソル列をハイライトしない
+    " バッファを閉じる定義
     nnoremap <silent> <buffer>
-                \ <Plug>(session-close)
-                \ :<C-u>bwipeout!<CR>
-
+                \ <Plug>(hq-close)
+                \ :call nvim_win_close(0, v:true)<CR>
+    " カーソル位置のコマンドを実行する定義
     nnoremap <silent> <buffer>
-                \ <Plug>(session-open)
-                \ :call ExecuteCom(getline('.')[col('.')-1])<CR>
-
-    nmap <buffer> q <Plug>(session-close)
-    nmap <buffer> <Plug>(hq-toggle) <Plug>(session-close)
-    nmap <buffer> <esc> <Plug>(session-close)
-    nmap <buffer> <CR> <Plug>(session-open)
-    " 抑止
+                \ <Plug>(hq-execute)
+                \ :call ExecuteCommand(getline('.')[col('.')-1])<CR>
+    " バッファを閉じるマッピングを登録
+    nmap <silent><buffer> q <Plug>(hq-close)
+    nmap <silent><buffer> <esc> <Plug>(hq-close)
+    " コマンドを実行するマッピングを登録
+    nmap <buffer> <CR> <Plug>(hq-execute)
+    " バッファ内での既存マッピングを無効化
     map <buffer> l <nop>
     map <buffer> h <nop>
     map <buffer> w <nop>
@@ -33,25 +31,23 @@ function! HQ#Main() abort
     map <buffer> a <nop>
     map <buffer> f <nop>
 
-    %delete _
-
-    " 一覧作成処理
+    " リスト作成処理
     let cnt = 1
-    for k in keys(g:hq_commands)
+    for key in keys(g:hq_commands)
 
         " リストの個数で分岐
-        if len(g:hq_commands[k]) == 1
-            call setline(cnt, '[' . k . ']' . '  ' . g:hq_commands[k][0])
-        elseif len(g:hq_commands[k]) == 2
-            call setline(cnt, '[' . k . ']' . '  ' . g:hq_commands[k][0] . '  ' . '('  . g:hq_commands[k][1] . ')')
+        if len(g:hq_commands[key]) == 1
+            call setline(cnt, '[' . key . ']' . '  ' . g:hq_commands[key][0])
+        elseif len(g:hq_commands[key]) == 2
+            call setline(cnt, '[' . key . ']' . '  ' . g:hq_commands[key][0] . '  ' . '('  . g:hq_commands[key][1] . ')')
         else
             continue
         endif
 
         " マッピング
-        execute 'nnoremap <buffer><silent><nowait>' k
-                    \ ':call execute("bwipeout!")<cr>'
-                    \ ':call execute("' g:hq_commands[k][0] '", "")<cr>'
+        execute 'nnoremap <buffer><silent><nowait>' key
+                    \ ':call nvim_win_close(0, v:true)<CR>'
+                    \ ':call execute("' g:hq_commands[key][0] '", "")<cr>'
         let cnt += 1
     endfor
 
@@ -62,8 +58,8 @@ function! HQ#Main() abort
 endfunction
 
 " エンターでカーソル位置のコマンドを実行
-function! ExecuteCom(idx) abort
-    call execute("bwipeout!")
+function! ExecuteCommand(idx) abort
+    call nvim_win_close(0, v:true)
     call execute(g:hq_commands[a:idx][0], "")
 endfunction
 
@@ -82,52 +78,20 @@ function! HQ#Highlight() abort
     let b:current_syntax = 'hq'
 endfunction
 
-" echo 'gorilla'
-" let s:buffer_name = 'vim-HQ'
-" execute 'new' s:buffer_name
-" silent! execute 'keepalt' ( 'top' ) '10new HQ'
-
-" function! HQ#Main() abort
-"     " floating windownで新規バッファ
-"     let total_cnt = len(g:hq_commands)
-"     let buf = nvim_create_buf(v:false, v:true)
-"     " call nvim_buf_set_lines(buf, 0, -1, v:true, ["test", "text"])
-"     let opts = {'relative': 'cursor', 'width': 30, 'height': total_cnt, 'col': 1, 'row': 1, 'anchor': 'NW', 'style': 'minimal'}
-"     let win = nvim_open_win(buf, 1, opts)
-"     hi MyHighlight guifg=#eceff4 guibg=#5e81ac gui=bold
-"     call nvim_win_set_option(win, 'winhl', 'Normal:MyHighlight')
-"     call nvim_win_set_option(win, 'winblend', 10)
-
-
-"     " マッピング
-"     nnoremap <buffer> <CR>
-"                 \ :call ExecuteCom(getline('.')[col('.')-1], a:win)<CR>
-
-
-"     " 一覧作成処理
-"     let cnt = 1
-"     for k in keys(g:hq_commands)
-
-"         " 描画
-"         call setline(cnt, '[' . k . ']' . '  ' . g:hq_commands[k][0])
-
-"         " 指定のキーにマッピング
-"         execute 'nnoremap <buffer><silent><nowait>' k
-"                     \ ':call execute("bwipeout!")<CR>'
-"                     \ ':call execute("' g:hq_commands[k][0] '", "")<CR>'
-
-"         let cnt += 1
-"     endfor
-
-"     " 初期カーソル位置を指定
-"     call cursor(1, 2)
-
-"     call HQ#Highlight()
-" endfunction
-
-" " エンターでカーソル位置のコマンドを実行
-" function! ExecuteCom(idx, win) abort
-"     "ウィンドウを閉じる
-"     call nvim_win_close(a:win, v:true)
-"     call execute(g:hq_commands[a:idx][0], "")
-" endfunction
+" 新規バッファをフローティングウィンドウで開く
+function! HqFloatingWindow() abort
+    let total_cnt = len(g:hq_commands) " コマンド総数
+    let width = 50
+    let height = total_cnt
+    let buf = nvim_create_buf(v:false, v:true)
+    let ui = nvim_list_uis()[0]
+    let opts = {'relative': 'editor',
+                \ 'width': width,
+                \ 'height': height,
+                \ 'col': (ui.width/2) - (width/2),
+                \ 'row': (ui.height/2) - (height/2),
+                \ 'anchor': 'NW',
+                \ 'style': 'minimal',
+                \ }
+    let win = nvim_open_win(buf, 1, opts)
+endfunction
